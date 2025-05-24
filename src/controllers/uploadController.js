@@ -60,7 +60,7 @@ exports.deleteProfilePhoto = async (request, h) => {
       const publicId = user.photo.split('/').pop().split('.')[0];
       
       // Hapus gambar dari Cloudinary
-      await cloudinary.uploader.destroy(`santaratrip/profiles/${publicId}`);
+      await cloudinary.uploader.destroy(`sandtaratrip/profiles/${publicId}`);
     }
     
     // Reset foto ke default

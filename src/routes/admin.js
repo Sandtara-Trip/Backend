@@ -233,6 +233,55 @@ const routes = [
     },
     handler: adminController.addRoom
   },
+
+  // Update tipe kamar
+  {
+    method: 'PUT',
+    path: '/admin/hotel/kamar/{id}',
+    options: {
+      pre: [
+        { method: auth },
+        { method: admin }
+      ],
+      payload: {
+        parse: true,
+        allow: ['multipart/form-data', 'application/json']
+      },
+      validate: {
+        params: Joi.object({
+          id: Joi.string().required()
+        }),
+        payload: Joi.object({
+          hotel: Joi.string().optional(),
+          type: Joi.string().optional(),
+          price: Joi.number().optional(),
+          facilities: Joi.string().optional(),
+          restrictions: Joi.string().optional(),
+          capacity: Joi.number().optional(),
+          images: Joi.any().optional()
+        })
+      }
+    },
+    handler: adminController.updateRoom
+  },
+
+  // Hapus tipe kamar
+  {
+    method: 'DELETE',
+    path: '/admin/hotel/kamar/{id}',
+    options: {
+      pre: [
+        { method: auth },
+        { method: admin }
+      ],
+      validate: {
+        params: Joi.object({
+          id: Joi.string().required()
+        })
+      }
+    },
+    handler: adminController.deleteRoom
+  },
   
   // Tambah event
   {

@@ -9,7 +9,7 @@ const crypto = require('crypto');
 // @access  Public
 exports.register = async (request, h) => {
   try {
-    const { name, email, password } = request.payload;
+    const { name, email, password, role } = request.payload;
 
     // Cek apakah email sudah terdaftar
     const userExists = await User.findOne({ email });
@@ -24,22 +24,29 @@ exports.register = async (request, h) => {
     const verificationExpire = Date.now() + 30 * 60 * 1000;
 
     // Buat user baru
-    const user = await User.create({
+    const userData = {
       name,
       email,
       password,
       verificationCode,
       verificationExpire,
       isVerified: false
-    });
+    };
+
+    // Jika role disediakan, gunakan role tersebut
+    if (role) {
+      userData.role = role;
+    }
+
+    const user = await User.create(userData);
 
     // Import fungsi sendEmail
     const sendEmail = require('../utils/sendEmail');
 
     // Buat pesan email verifikasi
     const message = `
-      <h1>Verifikasi Akun SantaraTrip</h1>
-      <p>Terima kasih telah mendaftar di SantaraTrip!</p>
+      <h1>Verifikasi Akun SandtaraTrip</h1>
+      <p>Terima kasih telah mendaftar di SandtaraTrip!</p>
       <p>Kode verifikasi Anda adalah:</p>
       <h2 style="background-color: #f4f4f4; padding: 10px; text-align: center; font-size: 24px;">${verificationCode}</h2>
       <p>Kode ini akan berlaku selama 30 menit.</p>
@@ -50,7 +57,7 @@ exports.register = async (request, h) => {
       // Kirim email verifikasi
       await sendEmail({
         email: user.email,
-        subject: 'SantaraTrip - Verifikasi Akun',
+        subject: 'SandtaraTrip - Verifikasi Akun',
         message
       });
 
@@ -60,7 +67,8 @@ exports.register = async (request, h) => {
         user: {
           id: user._id,
           name: user.name,
-          email: user.email
+          email: user.email,
+          role: user.role
         }
       }).code(201);
     } catch (err) {
@@ -73,7 +81,8 @@ exports.register = async (request, h) => {
         user: {
           id: user._id,
           name: user.name,
-          email: user.email
+          email: user.email,
+          role: user.role
         }
       }).code(201);
     }
@@ -168,7 +177,7 @@ exports.forgotPassword = async (request, h) => {
       // Kirim email
       await sendEmail({
         email: user.email,
-        subject: 'SantaraTrip - Reset Password',
+        subject: 'SandtaraTrip - Reset Password',
         message
       });
 
@@ -306,7 +315,7 @@ exports.resendVerification = async (request, h) => {
 
     // Buat pesan email verifikasi
     const message = `
-      <h1>Verifikasi Akun SantaraTrip</h1>
+      <h1>Verifikasi Akun SandtaraTrip</h1>
       <p>Berikut adalah kode verifikasi baru Anda:</p>
       <h2 style="background-color: #f4f4f4; padding: 10px; text-align: center; font-size: 24px;">${verificationCode}</h2>
       <p>Kode ini akan berlaku selama 30 menit.</p>
@@ -317,7 +326,7 @@ exports.resendVerification = async (request, h) => {
       // Kirim email verifikasi
       await sendEmail({
         email: user.email,
-        subject: 'SantaraTrip - Kode Verifikasi Baru',
+        subject: 'SandtaraTrip - Kode Verifikasi Baru',
         message
       });
 

@@ -44,7 +44,7 @@ const routes = [
             
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'santaratrip/profiles',
+                folder: 'sandtaratrip/profiles',
                 transformation: [{ width: 500, height: 500, crop: 'limit' }]
               },
               (error, result) => {

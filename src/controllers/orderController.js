@@ -70,7 +70,7 @@ exports.bookHotel = async (request, h) => {
     // Kirim email konfirmasi
     const emailMessage = `
       <h1>Konfirmasi Booking Hotel</h1>
-      <p>Terima kasih telah melakukan booking di SantaraTrip!</p>
+      <p>Terima kasih telah melakukan booking di SandtaraTrip!</p>
       <p>Berikut detail booking Anda:</p>
       <ul>
         <li>Invoice: ${invoiceNumber}</li>
@@ -88,7 +88,7 @@ exports.bookHotel = async (request, h) => {
     try {
       await sendEmail({
         email: user.email,
-        subject: 'SantaraTrip - Konfirmasi Booking Hotel',
+        subject: 'SandtaraTrip - Konfirmasi Booking Hotel',
         message: emailMessage
       });
     } catch (err) {
@@ -125,7 +125,7 @@ exports.bookHotel = async (request, h) => {
 // @access  Private
 exports.bookWisata = async (request, h) => {
   try {
-    const { destinationId, startDate, endDate, quantity, paymentMethod, notes } = request.payload;
+    const { destinationId, visitDate, quantity, paymentMethod, notes } = request.payload;
     const user = request.auth.credentials;
 
     // Cek apakah destinasi ada
@@ -151,8 +151,8 @@ exports.bookWisata = async (request, h) => {
       paymentStatus: 'pending',
       paymentMethod,
       bookingDate: new Date(),
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      startDate: new Date(visitDate),
+      endDate: new Date(visitDate),
       notes
     });
 
@@ -162,12 +162,12 @@ exports.bookWisata = async (request, h) => {
     // Kirim email konfirmasi
     const emailMessage = `
       <h1>Konfirmasi Booking Wisata</h1>
-      <p>Terima kasih telah melakukan booking di SantaraTrip!</p>
+      <p>Terima kasih telah melakukan booking di SandtaraTrip!</p>
       <p>Berikut detail booking Anda:</p>
       <ul>
         <li>Invoice: ${invoiceNumber}</li>
         <li>Destinasi: ${destination.name}</li>
-        <li>Tanggal Kunjungan: ${new Date(startDate).toLocaleDateString('id-ID')}</li>
+        <li>Tanggal Kunjungan: ${new Date(visitDate).toLocaleDateString('id-ID')}</li>
         <li>Jumlah Tiket: ${quantity}</li>
         <li>Total Harga: Rp ${totalPrice.toLocaleString('id-ID')}</li>
       </ul>
@@ -178,7 +178,7 @@ exports.bookWisata = async (request, h) => {
     try {
       await sendEmail({
         email: user.email,
-        subject: 'SantaraTrip - Konfirmasi Booking Wisata',
+        subject: 'SandtaraTrip - Konfirmasi Booking Wisata',
         message: emailMessage
       });
     } catch (err) {
@@ -188,7 +188,7 @@ exports.bookWisata = async (request, h) => {
 
     // Generate payment token
     try {
-      const paymentToken = await generatePaymentToken(order, user, hotel.name + ' - ' + room.type, invoiceNumber);
+      const paymentToken = await generatePaymentToken(order, user, destination.name, invoiceNumber);
       return {
         success: true,
         data: order,
@@ -217,14 +217,28 @@ exports.getUserOrders = async (request, h) => {
   try {
     const user = request.auth.credentials;
 
-    // Simplify the query to avoid model reference issues
+    // Get orders and format them
     const orders = await Order.find({ user: user.id })
       .sort({ createdAt: -1 });
+
+    // Format the orders
+    const formattedOrders = orders.map(order => {
+      const orderObj = order.toObject();
+      
+      // For destination orders, combine start/end date into visitDate
+      if (orderObj.orderType === 'destination') {
+        orderObj.visitDate = orderObj.startDate;
+        delete orderObj.startDate;
+        delete orderObj.endDate;
+      }
+      
+      return orderObj;
+    });
 
     return {
       success: true,
       count: orders.length,
-      data: orders
+      data: formattedOrders
     };
   } catch (error) {
     console.error(error);
@@ -240,7 +254,6 @@ exports.getOrderDetail = async (request, h) => {
     const user = request.auth.credentials;
     const { id } = request.params;
 
-    // Simplify the query to avoid model reference issues
     const order = await Order.findById(id);
 
     if (!order) {
@@ -248,14 +261,23 @@ exports.getOrderDetail = async (request, h) => {
     }
 
     // Cek apakah order milik user yang sedang login
-    // Temporarily commented out for testing
-    // if (order.user.toString() !== user.id && user.role !== 'admin') {
-    //   return Boom.forbidden('Tidak diizinkan mengakses order ini');
-    // }
+    if (order.user.toString() !== user.id && user.role !== 'admin') {
+      return Boom.forbidden('Tidak diizinkan mengakses order ini');
+    }
+
+    // Format the order
+    const orderObj = order.toObject();
+    
+    // For destination orders, combine start/end date into visitDate
+    if (orderObj.orderType === 'destination') {
+      orderObj.visitDate = orderObj.startDate;
+      delete orderObj.startDate;
+      delete orderObj.endDate;
+    }
 
     return {
       success: true,
-      data: order
+      data: orderObj
     };
   } catch (error) {
     console.error(error);
@@ -425,9 +447,14 @@ exports.paymentNotification = async (request, h) => {
     // Kirim email tiket jika pembayaran berhasil
     if (order.paymentStatus === 'paid') {
       try {
-        // Populate user data untuk email
-        await order.populate('user');
-        await order.populate('items.itemId');
+        // Populate user data dan item details untuk email
+        await order.populate([
+          { path: 'user' },
+          { 
+            path: 'items.itemId',
+            model: order.orderType === 'hotel' ? 'Room' : 'Destination'
+          }
+        ]);
         
         await sendTicketEmail(order);
         console.log('Email tiket berhasil dikirim');
@@ -518,6 +545,42 @@ async function generatePaymentToken(order, user, itemName, invoiceNumber) {
   }
 }
 
+// @desc    Get reviews for hotel/destination
+// @route   GET /reviews/:itemType/:itemId
+// @access  Public
+exports.getReviews = async (request, h) => {
+  try {
+    const { itemType, itemId } = request.params;
+
+    // Validate item type
+    if (!['hotel', 'destination'].includes(itemType)) {
+      return Boom.badRequest('Invalid item type');
+    }
+
+    // Find reviews
+    const reviews = await Review.find({
+      itemType,
+      itemId
+    }).populate('user', 'name');
+
+    // Calculate average rating
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = reviews.length > 0 ? totalRating / reviews.length : 0;
+
+    return {
+      success: true,
+      data: {
+        reviews,
+        averageRating,
+        totalReviews: reviews.length
+      }
+    };
+  } catch (error) {
+    console.error(error);
+    return Boom.badImplementation('Server Error');
+  }
+};
+
 // Fungsi helper untuk mengirim email tiket
 async function sendTicketEmail(order) {
   try {
@@ -536,7 +599,7 @@ async function sendTicketEmail(order) {
     // Buat pesan email
     const emailMessage = `
       <h1>E-Tiket SandtaraTrip</h1>
-      <p>Terima kasih telah melakukan pemesanan di SantaraTrip!</p>
+      <p>Terima kasih telah melakukan pemesanan di SandtaraTrip!</p>
       <p>Berikut adalah e-tiket Anda:</p>
       <div style="border: 1px solid #ddd; padding: 15px; margin: 15px 0;">
         <h2>Tiket #${ticketNumber}</h2>
@@ -557,7 +620,7 @@ async function sendTicketEmail(order) {
     // Kirim email
     await sendEmail({
       email: order.user.email,
-      subject: 'SantaraTrip - E-Tiket Anda',
+      subject: 'SandtaraTrip - E-Tiket Anda',
       message: emailMessage
     });
 

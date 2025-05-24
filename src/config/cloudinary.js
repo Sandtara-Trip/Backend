@@ -14,7 +14,7 @@ cloudinary.config({
 const profileStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'santaratrip/profiles',
+    folder: 'sandtaratrip/profiles',
     allowed_formats: ['jpg', 'jpeg', 'png'],
     transformation: [{ width: 500, height: 500, crop: 'limit' }]
   }
@@ -24,7 +24,7 @@ const profileStorage = new CloudinaryStorage({
 const tripStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'santaratrip/trips',
+    folder: 'sandtaratrip/trips',
     allowed_formats: ['jpg', 'jpeg', 'png'],
     transformation: [{ width: 1200, height: 800, crop: 'limit' }]
   }

@@ -16,7 +16,7 @@ const routes = [
         handler: (request, h) => {
             return {
                 status: 'success',
-                message: 'SantaraTrip API is running',
+                message: 'SandtaraTrip API is running',
                 version: '1.0.0',
                 documentation: 'API includes authentication, user management, media upload, and admin features'
             };

@@ -44,7 +44,7 @@ exports.addDestination = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'santaratrip/destinations',
+                folder: 'sandtaratrip/destinations',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -139,7 +139,7 @@ exports.addHotel = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'santaratrip/hotels',
+                folder: 'sandtaratrip/hotels',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -205,7 +205,7 @@ exports.addRoom = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'santaratrip/rooms',
+                folder: 'sandtaratrip/rooms',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -282,7 +282,7 @@ exports.addEvent = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'santaratrip/events',
+                folder: 'sandtaratrip/events',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -387,7 +387,7 @@ exports.updateDestination = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'santaratrip/destinations',
+                folder: 'sandtaratrip/destinations',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -525,7 +525,7 @@ exports.updateHotel = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'santaratrip/hotels',
+                folder: 'sandtaratrip/hotels',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -648,7 +648,7 @@ exports.updateEvent = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'santaratrip/events',
+                folder: 'sandtaratrip/events',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -741,7 +741,7 @@ exports.deleteUser = async (request, h) => {
       const publicId = user.photo.split('/').pop().split('.')[0];
       
       // Hapus gambar dari Cloudinary
-      await cloudinary.uploader.destroy(`santaratrip/profiles/${publicId}`);
+      await cloudinary.uploader.destroy(`sandtaratrip/profiles/${publicId}`);
     }
     
     await user.deleteOne();
@@ -769,6 +769,122 @@ exports.getAllOrders = async (request, h) => {
       success: true,
       count: orders.length,
       data: orders
+    };
+  } catch (error) {
+    console.error(error);
+    return Boom.badImplementation('Server Error');
+  }
+};
+
+// @desc    Update tipe kamar
+// @route   PUT /admin/hotel/kamar/{id}
+// @access  Admin
+exports.updateRoom = async (request, h) => {
+  try {
+    const { id } = request.params;
+    const { hotel, type, price, facilities, restrictions, capacity } = request.payload;
+    
+    // Cek apakah kamar ada
+    const roomExists = await Room.findById(id);
+    if (!roomExists) {
+      return Boom.notFound('Kamar tidak ditemukan');
+    }
+    
+    // Jika hotel diubah, cek apakah hotel baru ada
+    if (hotel) {
+      const hotelExists = await Hotel.findById(hotel);
+      if (!hotelExists) {
+        return Boom.notFound('Hotel tidak ditemukan');
+      }
+    }
+    
+    // Proses upload gambar jika ada
+    let images = roomExists.images;
+    if (request.payload.images) {
+      if (request.headers['content-type'] && request.headers['content-type'].includes('multipart/form-data')) {
+        const imageFiles = Array.isArray(request.payload.images) 
+          ? request.payload.images 
+          : [request.payload.images];
+        
+        let uploadedImages = [];
+        for (const file of imageFiles) {
+          // Upload ke Cloudinary
+          const result = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+              {
+                folder: 'sandtaratrip/rooms',
+                transformation: [{ width: 1200, height: 800, crop: 'limit' }]
+              },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            );
+            
+            file.pipe(stream);
+          });
+          
+          uploadedImages.push(result.secure_url);
+        }
+        
+        if (uploadedImages.length > 0) {
+          images = uploadedImages;
+        }
+      } else if (typeof request.payload.images === 'string') {
+        images = [request.payload.images];
+      }
+    }
+    
+    // Update kamar
+    const room = await Room.findByIdAndUpdate(
+      id,
+      {
+        hotel: hotel || roomExists.hotel,
+        type: type || roomExists.type,
+        price: price || roomExists.price,
+        facilities: facilities ? facilities.split(',').map(item => item.trim()) : roomExists.facilities,
+        restrictions: restrictions ? restrictions.split(',').map(item => item.trim()) : roomExists.restrictions,
+        capacity: capacity || roomExists.capacity,
+        images: images
+      },
+      { new: true }
+    );
+    
+    return {
+      success: true,
+      data: room
+    };
+  } catch (error) {
+    console.error(error);
+    return Boom.badImplementation('Server Error');
+  }
+};
+
+// @desc    Hapus tipe kamar
+// @route   DELETE /admin/hotel/kamar/{id}
+// @access  Admin
+exports.deleteRoom = async (request, h) => {
+  try {
+    const { id } = request.params;
+    
+    // Cek apakah kamar ada
+    const room = await Room.findById(id);
+    if (!room) {
+      return Boom.notFound('Kamar tidak ditemukan');
+    }
+    
+    // Cek apakah ada order yang terkait dengan kamar ini
+    const orderCount = await Order.countDocuments({ 'items.itemId': id, 'items.itemType': 'room' });
+    if (orderCount > 0) {
+      return Boom.badRequest('Kamar tidak dapat dihapus karena masih memiliki order terkait');
+    }
+    
+    // Hapus kamar
+    await Room.findByIdAndDelete(id);
+    
+    return {
+      success: true,
+      message: 'Kamar berhasil dihapus'
     };
   } catch (error) {
     console.error(error);

@@ -12,7 +12,8 @@ const routes = [
         payload: Joi.object({
           name: Joi.string().required().max(50),
           email: Joi.string().required().email(),
-          password: Joi.string().required().min(6)
+          password: Joi.string().required().min(6),
+          role: Joi.string().valid('user', 'admin')
         })
       }
     },

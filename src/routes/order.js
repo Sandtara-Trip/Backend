@@ -39,8 +39,7 @@ const routes = [
       validate: {
         payload: Joi.object({
           destinationId: Joi.string().required(),
-          startDate: Joi.date().required(),
-          endDate: Joi.date().required(),
+          visitDate: Joi.date().required(),
           quantity: Joi.number().integer().min(1).required(),
           paymentMethod: Joi.string().valid('transfer', 'credit_card', 'e-wallet').required(),
           notes: Joi.string().optional()
@@ -106,6 +105,21 @@ const routes = [
     method: 'POST',
     path: '/payment/midtrans-notify',
     handler: orderController.paymentNotification
+  },
+  
+  // Lihat review hotel/wisata
+  {
+    method: 'GET',
+    path: '/reviews/{itemType}/{itemId}',
+    options: {
+      validate: {
+        params: Joi.object({
+          itemType: Joi.string().valid('hotel', 'destination').required(),
+          itemId: Joi.string().required()
+        })
+      }
+    },
+    handler: orderController.getReviews
   },
   
   // Kirim ulang tiket via email
