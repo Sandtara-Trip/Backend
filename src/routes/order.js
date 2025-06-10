@@ -49,6 +49,27 @@ const routes = [
     handler: orderController.bookWisata
   },
   
+  // Booking event
+  {
+    method: 'POST',
+    path: '/order/event',
+    options: {
+      pre: [
+        { method: auth }
+      ],
+      validate: {
+        payload: Joi.object({
+          eventId: Joi.string().required(),
+          visitDate: Joi.date().required(),
+          quantity: Joi.number().integer().min(1).required(),
+          paymentMethod: Joi.string().valid('transfer', 'credit_card', 'e-wallet').required(),
+          notes: Joi.string().optional()
+        })
+      }
+    },
+    handler: orderController.bookEvent
+  },
+  
   // Lihat semua order milik user
   {
     method: 'GET',
@@ -86,6 +107,12 @@ const routes = [
       pre: [
         { method: auth }
       ],
+      payload: {
+        output: 'stream',
+        parse: true,
+        multipart: true,
+        allow: 'multipart/form-data'
+      },
       validate: {
         payload: Joi.object({
           orderId: Joi.string().required(),
@@ -93,7 +120,7 @@ const routes = [
           itemType: Joi.string().valid('hotel', 'destination').required(),
           rating: Joi.number().min(1).max(5).required(),
           comment: Joi.string().required().max(500),
-          photos: Joi.array().items(Joi.string()).optional()
+          photos: Joi.array().items(Joi.any()).optional()
         })
       }
     },
@@ -137,6 +164,40 @@ const routes = [
       }
     },
     handler: orderController.resendTicket
+  },
+
+  // Cek status pembayaran
+  {
+    method: 'GET',
+    path: '/payment/status/{orderId}',
+    options: {
+      pre: [
+        { method: auth }
+      ],
+      validate: {
+        params: Joi.object({
+          orderId: Joi.string().required()
+        })
+      }
+    },
+    handler: orderController.checkPaymentStatus
+  },
+
+  // Get payment token for pending order
+  {
+    method: 'GET',
+    path: '/payment/token/{orderId}',
+    options: {
+      pre: [
+        { method: auth }
+      ],
+      validate: {
+        params: Joi.object({
+          orderId: Joi.string().required()
+        })
+      }
+    },
+    handler: orderController.getPaymentToken
   }
 ];
 

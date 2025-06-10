@@ -1,31 +1,71 @@
 const mongoose = require('mongoose');
 
-const DestinationSchema = new mongoose.Schema({
-  name: {
+const destinationSchema = new mongoose.Schema({
+  nama: {
     type: String,
     required: [true, 'Nama destinasi harus diisi'],
     trim: true
   },
-  detail: {
+  kategori: {
     type: String,
-    required: [true, 'Detail destinasi harus diisi']
+    // required: [true, 'Kategori harus diisi'],
+    enum:['alam', 'budaya', 'religi', 'hiburan', 'monumen', 'museum', 'tempat bermain']
   },
-  price: {
+  cuaca: {
+  type: String,
+  enum: ['panas', 'dingin'],
+  // required: [true, 'Cuaca harus diisi']   // ← aktifkan kalau mau wajib
+  },
+  harga: {
     type: Number,
-    required: [true, 'Harga destinasi harus diisi']
+    // required: [true, 'Harga harus diisi']
   },
-  benefits: [{
+   rating: {
+    type: Number,
+    min: 0,
+    max: 5,
+    default: 0
+  },
+  hariOperasional: [{
     type: String,
-    trim: true
+    enum: ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu']
   }],
-  restrictions: [{
+  alamat: {
     type: String,
-    trim: true
-  }],
-  images: [{
+    // required: [true, 'Alamat harus diisi']
+  },
+  kodePos: {
+    type: String
+  },
+  deskripsi: {
     type: String,
-    default: 'default-destination.jpg'
+    // required: [true, 'Deskripsi harus diisi']
+  },
+  fasilitas: [{
+    type: String
   }],
+  gambar: [{
+    type: String
+  }],
+  jamBuka: {
+    type: String
+  },
+  jamTutup: {
+    type: String
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'active'
+  },
+  latitude: {
+    type: Number,
+    // required: [true, 'Latitude harus diisi']
+  },
+  longitude: {
+    type: Number,
+    // required: [true, 'Longitude harus diisi']
+  },
   location: {
     type: {
       type: String,
@@ -34,29 +74,25 @@ const DestinationSchema = new mongoose.Schema({
     },
     coordinates: {
       type: [Number],
-      index: '2dsphere'
-    },
-    address: {
-      type: String,
-      required: [true, 'Alamat destinasi harus diisi']
-    },
-    city: {
-      type: String,
-      required: [true, 'Kota destinasi harus diisi']
-    },
-    province: {
-      type: String,
-      required: [true, 'Provinsi destinasi harus diisi']
+      default: undefined
     }
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('Destination', DestinationSchema);
+// Index untuk pencarian geografis
+destinationSchema.index({ location: '2dsphere' });
+
+// Middleware untuk mengisi koordinat location dari latitude dan longitude
+destinationSchema.pre('save', function(next) {
+  if (this.latitude && this.longitude) {
+    this.location = {
+      type: 'Point',
+      coordinates: [this.longitude, this.latitude] // GeoJSON menggunakan format [longitude, latitude]
+    };
+  }
+  next();
+});
+
+module.exports = mongoose.model('Destination', destinationSchema);

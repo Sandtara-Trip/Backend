@@ -45,8 +45,8 @@ exports.register = async (request, h) => {
 
     // Buat pesan email verifikasi
     const message = `
-      <h1>Verifikasi Akun SandtaraTrip</h1>
-      <p>Terima kasih telah mendaftar di SandtaraTrip!</p>
+      <h1>Verifikasi Akun SantaraTrip</h1>
+      <p>Terima kasih telah mendaftar di SantaraTrip!</p>
       <p>Kode verifikasi Anda adalah:</p>
       <h2 style="background-color: #f4f4f4; padding: 10px; text-align: center; font-size: 24px;">${verificationCode}</h2>
       <p>Kode ini akan berlaku selama 30 menit.</p>
@@ -57,7 +57,7 @@ exports.register = async (request, h) => {
       // Kirim email verifikasi
       await sendEmail({
         email: user.email,
-        subject: 'SandtaraTrip - Verifikasi Akun',
+        subject: 'SantaraTrip - Verifikasi Akun',
         message
       });
 
@@ -177,7 +177,7 @@ exports.forgotPassword = async (request, h) => {
       // Kirim email
       await sendEmail({
         email: user.email,
-        subject: 'SandtaraTrip - Reset Password',
+        subject: 'SantaraTrip - Reset Password',
         message
       });
 
@@ -315,7 +315,7 @@ exports.resendVerification = async (request, h) => {
 
     // Buat pesan email verifikasi
     const message = `
-      <h1>Verifikasi Akun SandtaraTrip</h1>
+      <h1>Verifikasi Akun SantaraTrip</h1>
       <p>Berikut adalah kode verifikasi baru Anda:</p>
       <h2 style="background-color: #f4f4f4; padding: 10px; text-align: center; font-size: 24px;">${verificationCode}</h2>
       <p>Kode ini akan berlaku selama 30 menit.</p>
@@ -326,7 +326,7 @@ exports.resendVerification = async (request, h) => {
       // Kirim email verifikasi
       await sendEmail({
         email: user.email,
-        subject: 'SandtaraTrip - Kode Verifikasi Baru',
+        subject: 'SantaraTrip - Kode Verifikasi Baru',
         message
       });
 

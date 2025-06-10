@@ -1,23 +1,15 @@
 const mongoose = require('mongoose');
 
-const HotelSchema = new mongoose.Schema({
+const hotelSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Nama hotel harus diisi'],
+    required: true,
     trim: true
   },
-  detail: {
+  description: {
     type: String,
-    required: [true, 'Detail hotel harus diisi']
+    // required: true
   },
-  price: {
-    type: Number,
-    required: [true, 'Harga dasar hotel harus diisi']
-  },
-  images: [{
-    type: String,
-    default: 'default-hotel.jpg'
-  }],
   location: {
     type: {
       type: String,
@@ -26,19 +18,19 @@ const HotelSchema = new mongoose.Schema({
     },
     coordinates: {
       type: [Number],
-      index: '2dsphere'
+      default: [0, 0]
     },
     address: {
       type: String,
-      required: [true, 'Alamat hotel harus diisi']
+      // required: true
     },
     city: {
       type: String,
-      required: [true, 'Kota hotel harus diisi']
+      // required: true
     },
     province: {
       type: String,
-      required: [true, 'Provinsi hotel harus diisi']
+      // required: true
     }
   },
   rating: {
@@ -47,14 +39,47 @@ const HotelSchema = new mongoose.Schema({
     max: 5,
     default: 0
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  facilities: [{
+    type: String,
+    enum: ['parking', 'restaurant', 'swimming_pool', 'gym', 'spa', 'wifi', 'meeting_room', 'laundry']
+  }],
+  images: [{
+    type: String,
+    default: 'default-hotel.jpg'
+  }],
+  checkInTime: {
+    type: String,
+    default: "14:00"
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  checkOutTime: {
+    type: String,
+    default: "12:00"
+  },
+  policies: {
+    type: [String],
+    default: []
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'maintenance'],
+    default: 'active'
+  },
+  contactInfo: {
+    phone: {
+      type: String,
+      // required: true
+    },
+    email: {
+      type: String,
+      // required: true
+    },
+    website: String
   }
+}, {
+  // timestamps: true
 });
 
-module.exports = mongoose.model('Hotel', HotelSchema);
+// Index untuk pencarian geografis
+hotelSchema.index({ location: '2dsphere' });
+
+module.exports = mongoose.model('Hotel', hotelSchema);

@@ -8,6 +8,10 @@ const nearbyRoutes = require('./nearby');
 const languageRoutes = require('./language');
 const destinationRoutes = require('./destination');
 const orderRoutes = require('./order');
+const recommendationRoutes = require('./recommendation');
+const roomRoutes = require('./room');
+const eventController = require('../controllers/eventController');
+const Joi = require('@hapi/joi');
 
 const routes = [
     {
@@ -16,11 +20,29 @@ const routes = [
         handler: (request, h) => {
             return {
                 status: 'success',
-                message: 'SandtaraTrip API is running',
+                message: 'SantaraTrip API is running',
                 version: '1.0.0',
                 documentation: 'API includes authentication, user management, media upload, and admin features'
             };
         }
+    },
+    // Public event routes
+    {
+        method: 'GET',
+        path: '/api/event',
+        handler: eventController.getAllEvents
+    },
+    {
+        method: 'GET',
+        path: '/api/event/{id}',
+        options: {
+            validate: {
+                params: Joi.object({
+                    id: Joi.string().required()
+                })
+            }
+        },
+        handler: eventController.getEventById
     }
 ];
 
@@ -38,7 +60,9 @@ module.exports = {
                 nearbyRoutes,
                 languageRoutes,
                 destinationRoutes,
-                orderRoutes
+                orderRoutes,
+                recommendationRoutes,
+                roomRoutes
             ]);
             
             // Register root route

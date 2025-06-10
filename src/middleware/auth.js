@@ -32,7 +32,8 @@ exports.auth = async (request, h) => {
       request.auth.credentials = {
         id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role
       };
 
       return h.continue;

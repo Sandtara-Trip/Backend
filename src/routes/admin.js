@@ -1,11 +1,127 @@
 'use strict';
 
 const adminController = require('../controllers/adminController');
+const eventController = require('../controllers/eventController');
 const { auth } = require('../middleware/auth');
 const { admin } = require('../middleware/admin');
 const Joi = require('@hapi/joi');
 
 const routes = [
+  // Event routes
+  {
+    method: 'GET',
+    path: '/admin/event',
+    options: {
+      pre: [
+        { method: auth },
+        { method: admin }
+      ]
+    },
+    handler: eventController.getAllEvents
+  },
+  {
+    method: 'GET',
+    path: '/admin/event/{id}',
+    options: {
+      pre: [
+        { method: auth },
+        { method: admin }
+      ],
+      validate: {
+        params: Joi.object({
+          id: Joi.string().required()
+        })
+      }
+    },
+    handler: eventController.getEventById
+  },
+  {
+    method: 'POST',
+    path: '/admin/event',
+    options: {
+      pre: [
+        { method: auth },
+        { method: admin }
+      ],
+      payload: {
+        output: 'stream',
+        parse: true,
+        allow: 'multipart/form-data',
+        multipart: true,
+        maxBytes: 20 * 1024 * 1024 // 20MB max file size
+      },
+      validate: {
+        payload: Joi.object({
+          name: Joi.string().required(),
+          detail: Joi.string().required(),
+          price: Joi.number().required(),
+          startDate: Joi.date().iso().required(),
+          endDate: Joi.date().iso().required(),
+          'location.address': Joi.string().required(),
+          'location.city': Joi.string().required(),
+          'location.province': Joi.string().required(),
+          capacity: Joi.number().integer().required(),
+          status: Joi.string().valid('active', 'inactive').default('active'),
+          images: Joi.any().optional()
+        })
+      }
+    },
+    handler: eventController.createEvent
+  },
+  {
+    method: 'PUT',
+    path: '/admin/event/{id}',
+    options: {
+      pre: [
+        { method: auth },
+        { method: admin }
+      ],
+      payload: {
+        output: 'stream',
+        parse: true,
+        allow: 'multipart/form-data',
+        multipart: true,
+        maxBytes: 20 * 1024 * 1024 // 20MB max file size
+      },
+      validate: {
+        params: Joi.object({
+          id: Joi.string().required()
+        }),
+        payload: Joi.object({
+          name: Joi.string().optional(),
+          detail: Joi.string().optional(),
+          price: Joi.number().optional(),
+          startDate: Joi.date().iso().optional(),
+          endDate: Joi.date().iso().optional(),
+          'location.address': Joi.string().optional(),
+          'location.city': Joi.string().optional(),
+          'location.province': Joi.string().optional(),
+          capacity: Joi.number().integer().optional(),
+          status: Joi.string().valid('active', 'inactive').optional(),
+          images: Joi.any().optional(),
+          remainingImages: Joi.string().optional()
+        })
+      }
+    },
+    handler: eventController.updateEvent
+  },
+  {
+    method: 'DELETE',
+    path: '/admin/event/{id}',
+    options: {
+      pre: [
+        { method: auth },
+        { method: admin }
+      ],
+      validate: {
+        params: Joi.object({
+          id: Joi.string().required()
+        })
+      }
+    },
+    handler: eventController.deleteEvent
+  },
+  
   // Tambah destinasi
   {
     method: 'POST',
@@ -283,103 +399,6 @@ const routes = [
     handler: adminController.deleteRoom
   },
   
-  // Tambah event
-  {
-    method: 'POST',
-    path: '/admin/event',
-    options: {
-      pre: [
-        { method: auth },
-        { method: admin }
-      ],
-      payload: {
-        parse: true,
-        allow: ['multipart/form-data', 'application/json']
-      },
-      validate: {
-        payload: Joi.object({
-          name: Joi.string().required(),
-          detail: Joi.string().required(),
-          price: Joi.number().required(),
-          startDate: Joi.date().required(),
-          endDate: Joi.date().required(),
-          location: Joi.object({
-            address: Joi.string().required(),
-            city: Joi.string().required(),
-            province: Joi.string().required(),
-            coordinates: Joi.array().items(Joi.number()).length(2).optional()
-          }).required(),
-          'location.address': Joi.string().optional(),
-          'location.city': Joi.string().optional(),
-          'location.province': Joi.string().optional(),
-          'location.coordinates': Joi.array().items(Joi.number()).length(2).optional(),
-          capacity: Joi.number().required(),
-          images: Joi.any().optional()
-        })
-      }
-    },
-    handler: adminController.addEvent
-  },
-  
-  // Update event
-  {
-    method: 'PUT',
-    path: '/admin/event/{id}',
-    options: {
-      pre: [
-        { method: auth },
-        { method: admin }
-      ],
-      payload: {
-        parse: true,
-        allow: ['multipart/form-data', 'application/json']
-      },
-      validate: {
-        params: Joi.object({
-          id: Joi.string().required()
-        }),
-        payload: Joi.object({
-          name: Joi.string().optional(),
-          detail: Joi.string().optional(),
-          price: Joi.number().optional(),
-          startDate: Joi.date().optional(),
-          endDate: Joi.date().optional(),
-          location: Joi.object({
-            address: Joi.string().optional(),
-            city: Joi.string().optional(),
-            province: Joi.string().optional(),
-            coordinates: Joi.array().items(Joi.number()).length(2).optional()
-          }).optional(),
-          'location.address': Joi.string().optional(),
-          'location.city': Joi.string().optional(),
-          'location.province': Joi.string().optional(),
-          'location.coordinates': Joi.array().items(Joi.number()).length(2).optional(),
-          capacity: Joi.number().optional(),
-          images: Joi.any().optional()
-        })
-      }
-    },
-    handler: adminController.updateEvent
-  },
-  
-  // Hapus event
-  {
-    method: 'DELETE',
-    path: '/admin/event/{id}',
-    options: {
-      pre: [
-        { method: auth },
-        { method: admin }
-      ],
-      validate: {
-        params: Joi.object({
-          id: Joi.string().required()
-        })
-      }
-    },
-    handler: adminController.deleteEvent
-  },
-  
   // Lihat semua user
   {
     method: 'GET',
@@ -422,6 +441,24 @@ const routes = [
       ]
     },
     handler: adminController.getAllOrders
+  },
+
+  // Detail order
+  {
+    method: 'GET',
+    path: '/admin/orders/{id}',
+    options: {
+      pre: [
+        { method: auth },
+        { method: admin }
+      ],
+      validate: {
+        params: Joi.object({
+          id: Joi.string().required()
+        })
+      }
+    },
+    handler: adminController.getOrderDetail
   },
   
   // Export orderan ke file Excel

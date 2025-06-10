@@ -9,7 +9,19 @@ const init = async () => {
         host: process.env.HOST || 'localhost',
         routes: {
             cors: {
-                origin: ['*']
+                origin: ['http://localhost:5173', 'http://localhost:3000'],
+                headers: [
+                    'Accept',
+                    'Authorization',
+                    'Content-Type',
+                    'If-None-Match',
+                    'Accept-language',
+                    'Origin',
+                    'X-Requested-With'
+                ],
+                additionalHeaders: ['X-Requested-With'],
+                credentials: true,
+                maxAge: 86400
             }
         }
     });

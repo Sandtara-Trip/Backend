@@ -2,41 +2,41 @@
 http://localhost:3000/auth/register
 POST
 {
-  "name": "riki",
-  "email": "user.testing@gmail.com",
+  "name": "Mocha Shaa",
+  "email": "chasouluix.testing@gmail.com",
   "password": "password123"
 }
 
 http://localhost:3000/auth/verify-email
 POST
 {
-  "email": "user.testing@gmail.com",
+  "email": "chasouluix.testing@gmail.com",
   "code": "123456"
 }
 
 http://localhost:3000/auth/resend-verification
 POST
 {
-  "email": "riki.testing@gmail.com"
+  "email": "chasouluix.testing@gmail.com"
 }
 
 http://localhost:3000/auth/login
 POST
 {
-  "email": "riki.testing@gmail.com",
+  "email": "chasouluix.testing@gmail.com",
   "password": "password123"
 }
 
 http://localhost:3000/auth/forgot-password
 POST
 {
-  "email": "riki.testing@gmail.com"
+  "email": "chasouluix.testing@gmail.com"
 }
 
 http://localhost:3000/auth/reset-password
 POST
 {
-  "email": "riki.testing@gmail.com",
+  "email": "chasouluix.testing@gmail.com",
   "code": "123456",
   "password": "newpassword123"
 }
@@ -57,7 +57,13 @@ DELETE
 http://localhost:3000/users/update
 PUT
 
+http://localhost:3000/destinasi
+GET
+
 http://localhost:3000/destinasi/{id}
+GET
+
+http://localhost:3000/hotels
 GET
 
 http://localhost:3000/hotel/{id}
@@ -79,7 +85,8 @@ POST
   "quantity": 1,
   "paymentMethod": "credit_card", 
   "notes": "catatan optional"
-}
+} 
+
 
 http://localhost:3000/order/wisata
 POST
@@ -118,6 +125,17 @@ POST
 
 link simulator paymentnya
 https://simulator.sandbox.midtrans.com/
+
+
+ML implementation
+GET
+http://localhost:3000/recommendation/weather?days=7
+
+http://localhost:3000/recommendation/destination?query=wisata%20untuk%20cuaca%20dingin&preferensi=wisata&top_n=20
+
+http://localhost:3000/recommendation/destination?query=wisata%20untuk%20cuaca%20panas&preferensi=wisata&top_n=20
+
+http://localhost:3000/recommendation/hotel?review=bagus%20dan%20nyaman
 
 
 
@@ -160,8 +178,8 @@ DELETE
 http://localhost:3000/admin/hotel
 POST
 {
-  "name": "Hotel Sandtara Bali",
-  "detail": "Hotel Sandtara Bali adalah hotel bintang 5 yang menawarkan pemandangan laut yang indah dan fasilitas mewah",
+  "name": "Hotel Santara Bali",
+  "detail": "Hotel Santara Bali adalah hotel bintang 5 yang menawarkan pemandangan laut yang indah dan fasilitas mewah",
   "price": 1500000,
   "location": {
     "address": "Jl. Pantai Kuta No. 88, Kuta",
@@ -174,8 +192,8 @@ POST
 http://localhost:3000/admin/hotel/{id}
 PUT
 {
-  "name": "Hotel Sandtara Bali 2",
-  "detail": "Hotel Sandtara Bali adalah hotel bintang 5 yang menawarkan pemandangan laut yang indah dan fasilitas mewah",
+  "name": "Hotel Santara Bali 2",
+  "detail": "Hotel Santara Bali adalah hotel bintang 5 yang menawarkan pemandangan laut yang indah dan fasilitas mewah",
   "price": 1500000,
   "location": {
     "address": "Jl. Pantai Kuta No. 88, Kuta",

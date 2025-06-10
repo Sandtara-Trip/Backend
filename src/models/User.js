@@ -23,6 +23,10 @@ const UserSchema = new mongoose.Schema({
     minlength: [6, 'Password minimal 6 karakter'],
     select: false
   },
+  phoneNumber: {
+    type: String,
+    trim: true
+  },
   photo: {
     type: String,
     default: 'default.jpg'
@@ -35,6 +39,11 @@ const UserSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'admin'],
     default: 'user'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'active'
   },
   isVerified: {
     type: Boolean,

@@ -14,7 +14,7 @@ cloudinary.config({
 const profileStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'sandtaratrip/profiles',
+    folder: 'santaratrip/profiles',
     allowed_formats: ['jpg', 'jpeg', 'png'],
     transformation: [{ width: 500, height: 500, crop: 'limit' }]
   }
@@ -24,7 +24,17 @@ const profileStorage = new CloudinaryStorage({
 const tripStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'sandtaratrip/trips',
+    folder: 'santaratrip/trips',
+    allowed_formats: ['jpg', 'jpeg', 'png'],
+    transformation: [{ width: 1200, height: 800, crop: 'limit' }]
+  }
+});
+
+// Konfigurasi storage untuk foto review
+const reviewStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'santaratrip/reviews',
     allowed_formats: ['jpg', 'jpeg', 'png'],
     transformation: [{ width: 1200, height: 800, crop: 'limit' }]
   }
@@ -36,8 +46,12 @@ const uploadProfile = multer({ storage: profileStorage });
 // Middleware untuk upload gambar trip
 const uploadTrip = multer({ storage: tripStorage });
 
+// Middleware untuk upload foto review
+const uploadReview = multer({ storage: reviewStorage });
+
 module.exports = {
   cloudinary,
   uploadProfile,
-  uploadTrip
+  uploadTrip,
+  uploadReview
 };

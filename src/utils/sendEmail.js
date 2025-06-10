@@ -21,7 +21,7 @@ const sendEmail = async (options) => {
 
   // Opsi email
   const mailOptions = {
-    from: `${process.env.FROM_NAME || 'SandtaraTrip'} <${process.env.FROM_EMAIL || process.env.SMTP_EMAIL}>`,
+    from: `${process.env.FROM_NAME || 'SantaraTrip'} <${process.env.FROM_EMAIL || process.env.SMTP_EMAIL}>`,
     to: options.email,
     subject: options.subject,
     html: options.message

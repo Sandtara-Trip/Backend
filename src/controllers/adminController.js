@@ -1,10 +1,5 @@
 const Boom = require('@hapi/boom');
-const User = require('../models/User');
-const Destination = require('../models/Destination');
-const Hotel = require('../models/Hotel');
-const Room = require('../models/Room');
-const Event = require('../models/Event');
-const Order = require('../models/Order');
+const { User, Destination, Hotel, Room, Event, Order } = require('../models');
 const { cloudinary } = require('../config/cloudinary');
 const excel = require('exceljs');
 
@@ -44,7 +39,7 @@ exports.addDestination = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'sandtaratrip/destinations',
+                folder: 'santaratrip/destinations',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -139,7 +134,7 @@ exports.addHotel = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'sandtaratrip/hotels',
+                folder: 'santaratrip/hotels',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -205,7 +200,7 @@ exports.addRoom = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'sandtaratrip/rooms',
+                folder: 'santaratrip/rooms',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -282,7 +277,7 @@ exports.addEvent = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'sandtaratrip/events',
+                folder: 'santaratrip/events',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -387,7 +382,7 @@ exports.updateDestination = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'sandtaratrip/destinations',
+                folder: 'santaratrip/destinations',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -525,7 +520,7 @@ exports.updateHotel = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'sandtaratrip/hotels',
+                folder: 'santaratrip/hotels',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -648,7 +643,7 @@ exports.updateEvent = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'sandtaratrip/events',
+                folder: 'santaratrip/events',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -741,7 +736,7 @@ exports.deleteUser = async (request, h) => {
       const publicId = user.photo.split('/').pop().split('.')[0];
       
       // Hapus gambar dari Cloudinary
-      await cloudinary.uploader.destroy(`sandtaratrip/profiles/${publicId}`);
+      await cloudinary.uploader.destroy(`santaratrip/profiles/${publicId}`);
     }
     
     await user.deleteOne();
@@ -761,18 +756,76 @@ exports.deleteUser = async (request, h) => {
 // @access  Admin
 exports.getAllOrders = async (request, h) => {
   try {
+    console.log('Fetching all orders...');
+    
     const orders = await Order.find()
       .populate('user', 'name email')
-      .populate('items.itemId');
+      .populate({
+        path: 'items.itemId',
+        select: 'name type price images',
+        refPath: 'items.itemType'
+      })
+      .sort({ createdAt: -1 });
+    
+    console.log(`Found ${orders.length} orders`);
+    
+    // Format orders to ensure consistent structure
+    const formattedOrders = orders.map(order => {
+      const orderObj = order.toObject();
+      
+      // Ensure user object exists
+      if (!orderObj.user) {
+        orderObj.user = { name: 'Deleted User', email: 'N/A' };
+      }
+      
+      // Format dates
+      orderObj.bookingDate = orderObj.bookingDate ? new Date(orderObj.bookingDate).toISOString() : null;
+      orderObj.startDate = orderObj.startDate ? new Date(orderObj.startDate).toISOString() : null;
+      orderObj.endDate = orderObj.endDate ? new Date(orderObj.endDate).toISOString() : null;
+      orderObj.createdAt = orderObj.createdAt ? new Date(orderObj.createdAt).toISOString() : null;
+      
+      // Format items data
+      if (orderObj.items && Array.isArray(orderObj.items)) {
+        orderObj.items = orderObj.items.map(item => ({
+          ...item,
+          itemId: item.itemId || { name: 'Deleted Item', type: 'unknown', price: 0 }
+        }));
+      }
+      
+      return orderObj;
+    });
     
     return {
       success: true,
-      count: orders.length,
-      data: orders
+      count: formattedOrders.length,
+      data: formattedOrders
     };
   } catch (error) {
-    console.error(error);
-    return Boom.badImplementation('Server Error');
+    console.error('Error in getAllOrders:', error);
+    
+    // Handle specific error types
+    if (error.name === 'CastError') {
+      return h.response({
+        success: false,
+        message: 'Invalid ID format in query',
+        error: error.message
+      }).code(400);
+    }
+    
+    if (error.name === 'ValidationError') {
+      return h.response({
+        success: false,
+        message: 'Validation error',
+        error: error.message
+      }).code(400);
+    }
+    
+    // Generic server error
+    return h.response({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    }).code(500);
   }
 };
 
@@ -812,7 +865,7 @@ exports.updateRoom = async (request, h) => {
           const result = await new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: 'sandtaratrip/rooms',
+                folder: 'santaratrip/rooms',
                 transformation: [{ width: 1200, height: 800, crop: 'limit' }]
               },
               (error, result) => {
@@ -954,6 +1007,56 @@ exports.exportOrdersToExcel = async (request, h) => {
       .header('Content-Disposition', 'attachment; filename=orders.xlsx');
   } catch (error) {
     console.error(error);
+    return Boom.badImplementation('Server Error');
+  }
+};
+
+// @desc    Lihat detail order
+// @route   GET /admin/orders/{id}
+// @access  Admin
+exports.getOrderDetail = async (request, h) => {
+  try {
+    const { id } = request.params;
+    
+    console.log('Fetching order details:', { orderId: id });
+    
+    // Find order and populate necessary fields
+    const order = await Order.findById(id)
+      .populate('user', 'name email')
+      .populate({
+        path: 'items.itemId',
+        select: 'name type price images nama',
+        refPath: 'items.itemType'
+      });
+
+    if (!order) {
+      console.log('Order not found:', id);
+      return Boom.notFound('Order tidak ditemukan');
+    }
+
+    console.log('Order found:', {
+      orderId: order._id,
+      orderType: order.orderType,
+      status: order.status,
+      paymentStatus: order.paymentStatus
+    });
+
+    // Format the order
+    const orderObj = order.toObject();
+    
+    // For destination orders, combine start/end date into visitDate
+    if (orderObj.orderType === 'destination') {
+      orderObj.visitDate = orderObj.startDate;
+      delete orderObj.startDate;
+      delete orderObj.endDate;
+    }
+
+    return {
+      success: true,
+      data: orderObj
+    };
+  } catch (error) {
+    console.error('Error in getOrderDetail:', error);
     return Boom.badImplementation('Server Error');
   }
 };

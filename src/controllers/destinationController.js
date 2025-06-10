@@ -2,9 +2,28 @@ const Boom = require('@hapi/boom');
 const Destination = require('../models/Destination');
 const Hotel = require('../models/Hotel');
 const Room = require('../models/Room');
+const fs = require('fs');
+const path = require('path');
+const { cloudinary } = require('../config/cloudinary');
 
 // Fungsi untuk menghitung jarak antara dua titik koordinat (dalam kilometer)
 // Menggunakan rumus Haversine
+// @desc    Mendapatkan semua destinasi
+// @route   GET /api/wisata
+// @access  Public
+exports.getAllDestinations = async (request, h) => {
+  try {
+    const destinations = await Destination.find().select('-__v');
+    
+    return h.response({
+      success: true,
+      data: destinations
+    });
+  } catch (error) {
+    return Boom.badImplementation('Error saat mengambil data destinasi');
+  }
+};
+
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Radius bumi dalam kilometer
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -19,114 +38,29 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 // @desc    Mendapatkan detail destinasi
-// @route   GET /destinasi/{id}
+// @route   GET /api/wisata/{id}
 // @access  Public
 exports.getDestinationDetail = async (request, h) => {
   try {
     const { id } = request.params;
+    console.log('Fetching destination with ID:', id); // Debug log
     
     // Cari destinasi berdasarkan ID
     const destination = await Destination.findById(id);
     
     if (!destination) {
+      console.log('Destination not found for ID:', id); // Debug log
       return Boom.notFound('Destinasi tidak ditemukan');
     }
     
-    // Mendapatkan tempat makan terdekat (simulasi data)
-    const nearbyFood = [
-      {
-        id: 'food1',
-        name: 'Restoran Lokal',
-        type: 'restaurant',
-        cuisine: 'Indonesian',
-        distance: 0.5, // km
-        rating: 4.5,
-        priceRange: '$$',
-        address: `Jl. Dekat ${destination.name}, ${destination.location.city}`
-      },
-      {
-        id: 'food2',
-        name: 'Kafe Santai',
-        type: 'cafe',
-        cuisine: 'International',
-        distance: 0.8, // km
-        rating: 4.2,
-        priceRange: '$$',
-        address: `Jl. Sekitar ${destination.name}, ${destination.location.city}`
-      }
-    ];
-    
-    // Mendapatkan transportasi terdekat (simulasi data)
-    const nearbyTransport = [
-      {
-        id: 'transport1',
-        name: 'Terminal Bus',
-        type: 'bus_station',
-        distance: 1.2, // km
-        address: `Terminal ${destination.location.city}`,
-        routes: ['Route A', 'Route B', 'Route C']
-      },
-      {
-        id: 'transport2',
-        name: 'Stasiun Taksi',
-        type: 'taxi_stand',
-        distance: 0.3, // km
-        address: `Jl. Utama ${destination.location.city}`,
-        contact: '+62123456789'
-      }
-    ];
-    
-    // Mendapatkan hotel terdekat (simulasi data)
-    // Dalam implementasi nyata, ini akan menggunakan query geospatial ke database
-    const nearbyHotels = [
-      {
-        id: 'hotel1',
-        name: `Hotel dekat ${destination.name}`,
-        distance: 1.5, // km
-        rating: 4.0,
-        price: 500000,
-        address: `Jl. Hotel ${destination.location.city}`
-      },
-      {
-        id: 'hotel2',
-        name: `Penginapan ${destination.location.city}`,
-        distance: 2.1, // km
-        rating: 3.8,
-        price: 350000,
-        address: `Jl. Penginapan ${destination.location.city}`
-      }
-    ];
-    
-    // Gabungkan semua informasi
-    const result = {
-      ...destination.toObject(),
-      nearby: {
-        food: nearbyFood,
-        transport: nearbyTransport,
-        hotels: nearbyHotels
-      },
-      mapUrl: `https://maps.example.com/?lat=${destination.location.coordinates[1]}&lng=${destination.location.coordinates[0]}`,
-      weatherInfo: {
-        current: {
-          temp: 28, // Celsius
-          condition: 'Sunny',
-          humidity: 75,
-          windSpeed: 10 // km/h
-        },
-        forecast: [
-          { day: 'Today', high: 30, low: 24, condition: 'Sunny' },
-          { day: 'Tomorrow', high: 29, low: 23, condition: 'Partly Cloudy' }
-        ]
-      }
-    };
-    
-    return {
+    // Return data destinasi tanpa data tambahan untuk edit
+    return h.response({
       success: true,
-      data: result
-    };
+      data: destination
+    });
   } catch (error) {
-    console.error(error);
-    return Boom.badImplementation('Server Error');
+    console.error('Error fetching destination:', error); // Debug log
+    return Boom.badImplementation('Error saat mengambil data destinasi');
   }
 };
 
@@ -237,6 +171,24 @@ exports.getHotelDetail = async (request, h) => {
   }
 };
 
+// @desc    Mendapatkan semua hotel
+// @route   GET /hotels
+// @access  Public
+exports.getAllHotels = async (request, h) => {
+  try {
+    const hotels = await Hotel.find().select('-__v');
+    
+    return {
+      success: true,
+      count: hotels.length,
+      data: hotels
+    };
+  } catch (error) {
+    console.error(error);
+    return Boom.badImplementation('Server Error');
+  }
+};
+
 // @desc    Mendapatkan tipe kamar berdasarkan hotel
 // @route   GET /admin/hotel/{hotelId}/rooms
 // @access  Admin
@@ -261,5 +213,350 @@ exports.getRoomsByHotel = async (request, h) => {
   } catch (error) {
     console.error(error);
     return Boom.badImplementation('Server Error');
+  }
+};
+
+// @desc    Membuat destinasi baru
+// @route   POST /api/wisata
+// @access  Private/Admin
+exports.createDestination = async (request, h) => {
+  try {
+    const payload = request.payload;
+    console.log('Received payload:', payload);
+
+    // Handle multiple file uploads
+    const imagePaths = [];
+    if (payload.gambar) {
+      const files = Array.isArray(payload.gambar) ? payload.gambar : [payload.gambar];
+          
+          // Pastikan direktori uploads ada
+          const uploadDir = path.join(__dirname, '../../uploads');
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+
+      for (const file of files) {
+        if (file.hapi) {
+          try {
+            // Generate nama file yang unik
+            const timestamp = Date.now();
+            const originalName = file.hapi.filename;
+            const extension = path.extname(originalName);
+            const safeName = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            const filepath = path.join(uploadDir, safeName);
+          
+          // Simpan file
+          const fileStream = fs.createWriteStream(filepath);
+          await new Promise((resolve, reject) => {
+            file.pipe(fileStream);
+            fileStream.on('finish', resolve);
+            fileStream.on('error', reject);
+          });
+          
+            // Simpan path relatif untuk akses browser
+            imagePaths.push(`/uploads/${safeName}`);
+          } catch (uploadError) {
+            console.error('Error uploading file:', uploadError);
+            return Boom.badImplementation('Error saat mengupload gambar');
+          }
+        }
+      }
+    }
+
+    // Parse JSON strings jika ada
+    let hariOperasional = [];
+    let fasilitas = [];
+
+    try {
+      if (payload.hariOperasional) {
+        if (typeof payload.hariOperasional === 'string') {
+            hariOperasional = JSON.parse(payload.hariOperasional);
+        } else {
+          hariOperasional = payload.hariOperasional;
+        }
+      }
+
+      if (payload.fasilitas) {
+        if (typeof payload.fasilitas === 'string') {
+            fasilitas = JSON.parse(payload.fasilitas);
+        } else {
+          fasilitas = payload.fasilitas;
+        }
+      }
+    } catch (parseError) {
+      console.error('Error parsing JSON:', parseError);
+      return Boom.badRequest('Format data tidak valid');
+    }
+
+    // Validasi data yang diperlukan
+    if (!payload.nama || !payload.kategori || !payload.harga || !payload.alamat || !payload.deskripsi || !payload.latitude || !payload.longitude) {
+      console.error('Validasi gagal. Data wajib:', {
+        nama: payload.nama,
+        kategori: payload.kategori,
+        harga: payload.harga,
+        alamat: payload.alamat,
+        deskripsi: payload.deskripsi,
+        latitude: payload.latitude,
+        longitude: payload.longitude
+      });
+      return Boom.badRequest('Semua field wajib diisi');
+    }
+
+    // Validasi format latitude dan longitude
+    const latitude = parseFloat(payload.latitude);
+    const longitude = parseFloat(payload.longitude);
+    
+    if (isNaN(latitude) || isNaN(longitude) || 
+        latitude < -90 || latitude > 90 || 
+        longitude < -180 || longitude > 180) {
+      return Boom.badRequest('Format latitude/longitude tidak valid');
+    }
+
+    // Buat destinasi baru
+    const destination = new Destination({
+      nama: payload.nama,
+      kategori: payload.kategori,
+      harga: parseInt(payload.harga),
+      hariOperasional: hariOperasional,
+      alamat: payload.alamat,
+      kodePos: payload.kodePos || '',
+      deskripsi: payload.deskripsi,
+      fasilitas: fasilitas,
+      gambar: imagePaths,
+      jamBuka: payload.jamBuka || '',
+      jamTutup: payload.jamTutup || '',
+      status: payload.status || 'active',
+      latitude: latitude,
+      longitude: longitude
+    });
+
+    await destination.save();
+
+    return h.response({
+      success: true,
+      message: 'Destinasi berhasil ditambahkan',
+      data: destination
+    }).code(201);
+  } catch (error) {
+    console.error('Error creating destination:', error);
+    return Boom.badImplementation('Error saat menambahkan destinasi');
+  }
+};
+
+// @desc    Mengupdate destinasi
+// @route   PUT /api/wisata/{id}
+// @access  Private/Admin
+exports.updateDestination = async (request, h) => {
+  try {
+    const { id } = request.params;
+    const payload = request.payload;
+    console.log('Updating destination with ID:', id);
+    console.log('Received payload:', payload);
+    
+    // Cek apakah destinasi ada
+    const destinationExists = await Destination.findById(id);
+    if (!destinationExists) {
+      return Boom.notFound('Destinasi tidak ditemukan');
+    }
+
+    // Handle multiple file uploads
+    if (payload.gambar) {
+      const files = Array.isArray(payload.gambar) ? payload.gambar : [payload.gambar];
+      const newImagePaths = [];
+          
+          // Pastikan direktori uploads ada
+          const uploadDir = path.join(__dirname, '../../uploads');
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+
+      for (const file of files) {
+        if (file.hapi) {
+          try {
+            // Generate nama file yang unik
+            const timestamp = Date.now();
+            const originalName = file.hapi.filename;
+            const extension = path.extname(originalName);
+            const safeName = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            const filepath = path.join(uploadDir, safeName);
+          
+          // Simpan file
+          const fileStream = fs.createWriteStream(filepath);
+          await new Promise((resolve, reject) => {
+            file.pipe(fileStream);
+            fileStream.on('finish', resolve);
+            fileStream.on('error', reject);
+          });
+          
+            // Simpan path relatif untuk akses browser
+            newImagePaths.push(`/uploads/${safeName}`);
+          } catch (uploadError) {
+            console.error('Error uploading file:', uploadError);
+            return Boom.badImplementation('Error saat mengupload gambar');
+          }
+        }
+      }
+      
+      // Jika ada gambar baru, tambahkan ke array gambar yang sudah ada
+      if (newImagePaths.length > 0) {
+        destinationExists.gambar = [...(destinationExists.gambar || []), ...newImagePaths];
+      }
+    }
+
+    // Parse JSON strings jika ada
+    let hariOperasional = destinationExists.hariOperasional;
+    let fasilitas = destinationExists.fasilitas;
+
+    try {
+      if (payload.hariOperasional) {
+        if (typeof payload.hariOperasional === 'string') {
+            hariOperasional = JSON.parse(payload.hariOperasional);
+        } else {
+          hariOperasional = payload.hariOperasional;
+        }
+      }
+
+      if (payload.fasilitas) {
+        if (typeof payload.fasilitas === 'string') {
+            fasilitas = JSON.parse(payload.fasilitas);
+        } else {
+          fasilitas = payload.fasilitas;
+        }
+      }
+    } catch (parseError) {
+      console.error('Error parsing JSON:', parseError);
+      return Boom.badRequest('Format data tidak valid');
+    }
+
+    // Validasi dan parse latitude/longitude jika ada
+    let latitude = destinationExists.latitude;
+    let longitude = destinationExists.longitude;
+
+    if (payload.latitude !== undefined) {
+      latitude = parseFloat(payload.latitude);
+      if (isNaN(latitude) || latitude < -90 || latitude > 90) {
+        return Boom.badRequest('Format latitude tidak valid');
+      }
+    }
+
+    if (payload.longitude !== undefined) {
+      longitude = parseFloat(payload.longitude);
+      if (isNaN(longitude) || longitude < -180 || longitude > 180) {
+        return Boom.badRequest('Format longitude tidak valid');
+      }
+    }
+
+    // Update destinasi
+    const destination = await Destination.findByIdAndUpdate(
+      id,
+      {
+        nama: payload.nama || destinationExists.nama,
+        kategori: payload.kategori || destinationExists.kategori,
+        harga: payload.harga ? parseInt(payload.harga) : destinationExists.harga,
+        hariOperasional: hariOperasional,
+        alamat: payload.alamat || destinationExists.alamat,
+        kodePos: payload.kodePos || destinationExists.kodePos,
+        deskripsi: payload.deskripsi || destinationExists.deskripsi,
+        fasilitas: fasilitas,
+        gambar: destinationExists.gambar,
+        jamBuka: payload.jamBuka || destinationExists.jamBuka,
+        jamTutup: payload.jamTutup || destinationExists.jamTutup,
+        status: payload.status || destinationExists.status,
+        latitude: latitude,
+        longitude: longitude
+      },
+      { new: true }
+    );
+    
+    return h.response({
+      success: true,
+      message: 'Destinasi berhasil diperbarui',
+      data: destination
+    });
+  } catch (error) {
+    console.error('Error updating destination:', error);
+    return Boom.badImplementation('Error saat mengupdate destinasi');
+  }
+};
+
+// @desc    Menghapus destinasi
+// @route   DELETE /api/wisata/{id}
+// @access  Private/Admin
+exports.deleteDestination = async (request, h) => {
+  try {
+    const { id } = request.params;
+    
+    // Cari destinasi yang akan dihapus
+    const destination = await Destination.findById(id);
+    
+    if (!destination) {
+      return Boom.notFound('Destinasi tidak ditemukan');
+    }
+
+    // Hapus gambar jika ada
+    if (destination.gambar && destination.gambar.length > 0) {
+      for (const imagePath of destination.gambar) {
+        const fullPath = path.join(__dirname, '../..', imagePath);
+        if (fs.existsSync(fullPath)) {
+          try {
+            fs.unlinkSync(fullPath);
+          } catch (err) {
+            console.error('Error deleting image file:', err);
+            // Continue with deletion even if image deletion fails
+          }
+        }
+      }
+    }
+
+    // Hapus destinasi dari database
+    await Destination.findByIdAndDelete(id);
+
+    return h.response({
+      success: true,
+      message: 'Destinasi berhasil dihapus'
+    });
+  } catch (error) {
+    console.error('Error deleting destination:', error);
+    return Boom.badImplementation('Error saat menghapus destinasi');
+  }
+};
+
+// @desc    Menghapus satu foto wisata
+// @route   DELETE /api/wisata/{id}/foto/{fotoIndex}
+// @access  Private/Admin
+exports.deleteDestinationPhoto = async (request, h) => {
+  try {
+    const { id, fotoIndex } = request.params;
+    
+    // Cari destinasi yang akan diupdate
+    const destination = await Destination.findById(id);
+    
+    if (!destination) {
+      return Boom.notFound('Destinasi tidak ditemukan');
+    }
+
+    // Validasi index foto
+    if (!destination.gambar || fotoIndex >= destination.gambar.length) {
+      return Boom.badRequest('Index foto tidak valid');
+    }
+
+    // Hapus file fisik
+    const fullPath = path.join(__dirname, '../..', destination.gambar[fotoIndex]);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+
+    // Hapus path dari array gambar
+    destination.gambar.splice(fotoIndex, 1);
+    await destination.save();
+
+    return h.response({
+      success: true,
+      message: 'Foto berhasil dihapus',
+      data: destination
+    });
+  } catch (error) {
+    console.error('Error deleting photo:', error);
+    return Boom.badImplementation('Error saat menghapus foto');
   }
 };

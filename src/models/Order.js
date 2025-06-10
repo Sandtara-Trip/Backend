@@ -46,6 +46,9 @@ const OrderSchema = new mongoose.Schema({
     enum: ['transfer', 'credit_card', 'e-wallet'],
     required: [true, 'Metode pembayaran harus diisi']
   },
+  paymentUrl: {
+    type: String
+  },
   bookingDate: {
     type: Date,
     required: [true, 'Tanggal booking harus diisi']
@@ -75,5 +78,28 @@ const OrderSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Add a pre-save middleware to update timestamps
+OrderSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
+
+// Add virtual for item details
+OrderSchema.virtual('itemDetails').get(function() {
+  if (!this.items || !this.items.length) return null;
+  
+  const item = this.items[0];
+  return {
+    type: item.itemType,
+    quantity: item.quantity,
+    price: item.price,
+    total: item.quantity * item.price
+  };
+});
+
+// Ensure virtuals are included in toObject and toJSON
+OrderSchema.set('toObject', { virtuals: true });
+OrderSchema.set('toJSON', { virtuals: true });
 
 module.exports = mongoose.model('Order', OrderSchema);

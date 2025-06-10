@@ -1,77 +1,55 @@
 const mongoose = require('mongoose');
 
-const EventSchema = new mongoose.Schema({
+const eventSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Nama event harus diisi'],
+    required: true,
     trim: true
   },
   detail: {
     type: String,
-    required: [true, 'Detail event harus diisi']
+    required: true
   },
   price: {
     type: Number,
-    required: [true, 'Harga event harus diisi']
+    required: true
   },
   startDate: {
     type: Date,
-    required: [true, 'Waktu mulai event harus diisi']
+    required: true
   },
   endDate: {
     type: Date,
-    required: [true, 'Waktu selesai event harus diisi']
-  },
-  images: [{
-    type: String,
-    default: 'default-event.jpg'
-  }],
-  location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number],
-      index: '2dsphere'
-    },
-    address: {
-      type: String,
-      required: [true, 'Alamat event harus diisi']
-    },
-    city: {
-      type: String,
-      required: [true, 'Kota event harus diisi']
-    },
-    province: {
-      type: String,
-      required: [true, 'Provinsi event harus diisi']
-    }
+    required: true
   },
   capacity: {
     type: Number,
-    required: [true, 'Kapasitas event harus diisi']
+    required: true
   },
-  availableSeats: {
-    type: Number
+  location: {
+    address: {
+      type: String,
+      required: true
+    },
+    city: {
+      type: String,
+      required: true
+    },
+    province: {
+      type: String,
+      required: true
+    }
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  images: [{
+    type: String
+  }],
+  status: {
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'active'
   }
+}, {
+  timestamps: true
 });
 
-// Set availableSeats sama dengan capacity saat pertama kali dibuat
-EventSchema.pre('save', function(next) {
-  if (this.isNew) {
-    this.availableSeats = this.capacity;
-  }
-  next();
-});
-
-module.exports = mongoose.model('Event', EventSchema);
+module.exports = mongoose.model('Event', eventSchema);
