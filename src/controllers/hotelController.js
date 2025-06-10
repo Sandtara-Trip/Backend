@@ -3,6 +3,7 @@ const Hotel = require('../models/Hotel');
 const Room = require('../models/Room');
 const fs = require('fs');
 const path = require('path');
+const { cloudinary } = require('../config/cloudinary');
 
 // @desc    Mendapatkan semua hotel
 // @route   GET /api/hotels
@@ -63,27 +64,32 @@ exports.createHotel = async (request, h) => {
     const imagePaths = [];
     if (payload.images) {
       const files = Array.isArray(payload.images) ? payload.images : [payload.images];
-      
-      // Pastikan direktori uploads ada
-      const uploadDir = path.join(__dirname, '../../uploads');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
 
       for (const file of files) {
         if (file.hapi) {
-          const timestamp = Date.now();
-          const originalName = file.hapi.filename;
-          const safeName = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-          const filepath = path.join(uploadDir, safeName);
-
-          await new Promise((resolve, reject) => {
-            file.pipe(fs.createWriteStream(filepath))
-              .on('finish', resolve)
-              .on('error', reject);
-          });
-
-          imagePaths.push(`/uploads/${safeName}`);
+          try {
+            // Upload to Cloudinary
+            const result = await new Promise((resolve, reject) => {
+              const stream = cloudinary.uploader.upload_stream(
+                {
+                  folder: 'santaratrip/hotels',
+                  transformation: [{ width: 1200, height: 800, crop: 'limit' }]
+                },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve(result);
+                }
+              );
+              
+              file.pipe(stream);
+            });
+            
+            // Save Cloudinary URL
+            imagePaths.push(result.secure_url);
+          } catch (uploadError) {
+            console.error('Error uploading file to Cloudinary:', uploadError);
+            return Boom.badImplementation('Error saat mengupload gambar');
+          }
         }
       }
     }
@@ -152,26 +158,32 @@ exports.updateHotel = async (request, h) => {
     if (payload.images) {
       const files = Array.isArray(payload.images) ? payload.images : [payload.images];
       const newImagePaths = [];
-      
-      const uploadDir = path.join(__dirname, '../../uploads');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
 
       for (const file of files) {
         if (file.hapi) {
-          const timestamp = Date.now();
-          const originalName = file.hapi.filename;
-          const safeName = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-          const filepath = path.join(uploadDir, safeName);
-
-          await new Promise((resolve, reject) => {
-            file.pipe(fs.createWriteStream(filepath))
-              .on('finish', resolve)
-              .on('error', reject);
-          });
-
-          newImagePaths.push(`/uploads/${safeName}`);
+          try {
+            // Upload to Cloudinary
+            const result = await new Promise((resolve, reject) => {
+              const stream = cloudinary.uploader.upload_stream(
+                {
+                  folder: 'santaratrip/hotels',
+                  transformation: [{ width: 1200, height: 800, crop: 'limit' }]
+                },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve(result);
+                }
+              );
+              
+              file.pipe(stream);
+            });
+            
+            // Save Cloudinary URL
+            newImagePaths.push(result.secure_url);
+          } catch (uploadError) {
+            console.error('Error uploading file to Cloudinary:', uploadError);
+            return Boom.badImplementation('Error saat mengupload gambar');
+          }
         }
       }
 
@@ -267,10 +279,15 @@ exports.deleteHotelImage = async (request, h) => {
       return Boom.badRequest('Index foto tidak valid');
     }
 
-    if (hotel.images[index] !== 'default-hotel.jpg') {
-      const fullPath = path.join(__dirname, '../..', hotel.images[index]);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
+    const imageUrl = hotel.images[index];
+    if (imageUrl !== 'default-hotel.jpg') {
+      try {
+        // Extract public_id from Cloudinary URL
+        const publicId = imageUrl.split('/').slice(-1)[0].split('.')[0];
+        // Delete from Cloudinary
+        await cloudinary.uploader.destroy(`santaratrip/hotels/${publicId}`);
+      } catch (error) {
+        console.error('Error deleting image from Cloudinary:', error);
       }
     }
 

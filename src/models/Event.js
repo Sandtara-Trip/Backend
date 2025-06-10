@@ -10,22 +10,6 @@ const eventSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  price: {
-    type: Number,
-    required: true
-  },
-  startDate: {
-    type: Date,
-    required: true
-  },
-  endDate: {
-    type: Date,
-    required: true
-  },
-  capacity: {
-    type: Number,
-    required: true
-  },
   location: {
     address: {
       type: String,
@@ -43,11 +27,6 @@ const eventSchema = new mongoose.Schema({
   images: [{
     type: String
   }],
-  status: {
-    type: String,
-    enum: ['active', 'inactive'],
-    default: 'active'
-  }
 }, {
   timestamps: true
 });

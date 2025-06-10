@@ -8,7 +8,7 @@ const hotelSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    // required: true
+    required: true
   },
   location: {
     type: {
@@ -22,15 +22,15 @@ const hotelSchema = new mongoose.Schema({
     },
     address: {
       type: String,
-      // required: true
+      required: true
     },
     city: {
       type: String,
-      // required: true
+      required: true
     },
     province: {
       type: String,
-      // required: true
+      required: true
     }
   },
   rating: {
@@ -67,16 +67,16 @@ const hotelSchema = new mongoose.Schema({
   contactInfo: {
     phone: {
       type: String,
-      // required: true
+      required: true
     },
     email: {
       type: String,
-      // required: true
+      required: true
     },
     website: String
   }
 }, {
-  // timestamps: true
+  timestamps: true
 });
 
 // Index untuk pencarian geografis

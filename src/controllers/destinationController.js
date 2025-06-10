@@ -1,9 +1,9 @@
+const path = require('path');
+const fs = require('fs');
 const Boom = require('@hapi/boom');
 const Destination = require('../models/Destination');
 const Hotel = require('../models/Hotel');
 const Room = require('../models/Room');
-const fs = require('fs');
-const path = require('path');
 const { cloudinary } = require('../config/cloudinary');
 
 // Fungsi untuk menghitung jarak antara dua titik koordinat (dalam kilometer)
@@ -228,35 +228,30 @@ exports.createDestination = async (request, h) => {
     const imagePaths = [];
     if (payload.gambar) {
       const files = Array.isArray(payload.gambar) ? payload.gambar : [payload.gambar];
-          
-          // Pastikan direktori uploads ada
-          const uploadDir = path.join(__dirname, '../../uploads');
-          if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-          }
 
       for (const file of files) {
         if (file.hapi) {
           try {
-            // Generate nama file yang unik
-            const timestamp = Date.now();
-            const originalName = file.hapi.filename;
-            const extension = path.extname(originalName);
-            const safeName = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-            const filepath = path.join(uploadDir, safeName);
-          
-          // Simpan file
-          const fileStream = fs.createWriteStream(filepath);
-          await new Promise((resolve, reject) => {
-            file.pipe(fileStream);
-            fileStream.on('finish', resolve);
-            fileStream.on('error', reject);
-          });
-          
-            // Simpan path relatif untuk akses browser
-            imagePaths.push(`/uploads/${safeName}`);
+            // Upload to Cloudinary
+            const result = await new Promise((resolve, reject) => {
+              const stream = cloudinary.uploader.upload_stream(
+                {
+                  folder: 'santaratrip/destinations',
+                  transformation: [{ width: 1200, height: 800, crop: 'limit' }]
+                },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve(result);
+                }
+              );
+              
+              file.pipe(stream);
+            });
+            
+            // Save Cloudinary URL
+            imagePaths.push(result.secure_url);
           } catch (uploadError) {
-            console.error('Error uploading file:', uploadError);
+            console.error('Error uploading file to Cloudinary:', uploadError);
             return Boom.badImplementation('Error saat mengupload gambar');
           }
         }

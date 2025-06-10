@@ -8,23 +8,15 @@ const destinationSchema = new mongoose.Schema({
   },
   kategori: {
     type: String,
-    // required: [true, 'Kategori harus diisi'],
     enum:['alam', 'budaya', 'religi', 'hiburan', 'monumen', 'museum', 'tempat bermain']
   },
   cuaca: {
-  type: String,
-  enum: ['panas', 'dingin'],
-  // required: [true, 'Cuaca harus diisi']   // ← aktifkan kalau mau wajib
+    type: String,
+    enum: ['Panas', 'Hujan']
   },
   harga: {
     type: Number,
-    // required: [true, 'Harga harus diisi']
-  },
-   rating: {
-    type: Number,
-    min: 0,
-    max: 5,
-    default: 0
+    required: [true, 'Harga harus diisi']
   },
   hariOperasional: [{
     type: String,
@@ -32,14 +24,14 @@ const destinationSchema = new mongoose.Schema({
   }],
   alamat: {
     type: String,
-    // required: [true, 'Alamat harus diisi']
+    required: [true, 'Alamat harus diisi']
   },
   kodePos: {
     type: String
   },
   deskripsi: {
     type: String,
-    // required: [true, 'Deskripsi harus diisi']
+    required: [true, 'Deskripsi harus diisi']
   },
   fasilitas: [{
     type: String
@@ -60,11 +52,11 @@ const destinationSchema = new mongoose.Schema({
   },
   latitude: {
     type: Number,
-    // required: [true, 'Latitude harus diisi']
+    required: [true, 'Latitude harus diisi']
   },
   longitude: {
     type: Number,
-    // required: [true, 'Longitude harus diisi']
+    required: [true, 'Longitude harus diisi']
   },
   location: {
     type: {

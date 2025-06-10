@@ -1158,32 +1158,120 @@ async function generatePaymentToken(order, user, itemName, invoiceNumber) {
 exports.getReviews = async (request, h) => {
   try {
     const { itemType, itemId } = request.params;
+    
+    console.log('Getting reviews for:', { itemType, itemId });
 
     // Validate item type
-    if (!['hotel', 'destination'].includes(itemType)) {
+    if (!['hotel', 'destination', 'room'].includes(itemType)) {
       return Boom.badRequest('Invalid item type');
     }
 
-    // Find reviews
-    const reviews = await Review.find({
-      itemType,
-      itemId
-    }).populate('user', 'name');
+    let allReviews = [];
+    
+    if (itemType === 'hotel') {
+      // First check if hotel exists
+      const hotel = await Hotel.findById(itemId);
+      if (!hotel) {
+        console.log('Hotel not found:', itemId);
+        return Boom.notFound('Hotel tidak ditemukan');
+      }
+      console.log('Found hotel:', hotel._id.toString());
+
+      // Get all rooms that belong to this hotel
+      const rooms = await Room.find({ hotel: hotel._id });
+      console.log('Found rooms for hotel:', rooms.map(r => ({
+        id: r._id.toString(),
+        type: r.type,
+        hotelId: r.hotel.toString()
+      })));
+
+      // Get all reviews for this hotel and its rooms
+      const reviewQuery = {
+        $or: [
+          { itemId: hotel._id.toString() }, // Hotel reviews
+          { itemId: { $in: rooms.map(r => r._id.toString()) } } // Room reviews
+        ]
+      };
+
+      console.log('Review query:', JSON.stringify(reviewQuery, null, 2));
+
+      allReviews = await Review.find(reviewQuery)
+        .populate('user', 'name')
+        .lean();
+
+      console.log('Found reviews:', allReviews.map(r => ({
+        id: r._id.toString(),
+        itemId: r.itemId,
+        itemType: r.itemType,
+        rating: r.rating
+      })));
+
+    } else if (itemType === 'room') {
+      // First check if room exists
+      const room = await Room.findById(itemId);
+      if (!room) {
+        console.log('Room not found:', itemId);
+        return Boom.notFound('Room tidak ditemukan');
+      }
+
+      console.log('Found room:', {
+        roomId: room._id.toString(),
+        hotelId: room.hotel.toString(),
+        type: room.type
+      });
+
+      // Get all reviews for this room and its hotel
+      const reviewQuery = {
+        $or: [
+          { itemId: room._id.toString() }, // Room reviews
+          { itemId: room.hotel.toString() } // Hotel reviews
+        ]
+      };
+
+      console.log('Review query:', JSON.stringify(reviewQuery, null, 2));
+
+      allReviews = await Review.find(reviewQuery)
+        .populate('user', 'name')
+        .lean();
+
+      console.log('Found reviews:', allReviews.map(r => ({
+        id: r._id.toString(),
+        itemId: r.itemId,
+        itemType: r.itemType,
+        rating: r.rating
+      })));
+
+    } else {
+      // For destinations, just get destination reviews
+      allReviews = await Review.find({
+        itemType,
+        itemId
+      })
+      .populate('user', 'name')
+      .lean();
+    }
 
     // Calculate average rating
-    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
-    const averageRating = reviews.length > 0 ? totalRating / reviews.length : 0;
+    const totalRating = allReviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = allReviews.length > 0 ? totalRating / allReviews.length : 0;
+
+    // Log final response
+    console.log('Sending response:', {
+      totalReviews: allReviews.length,
+      averageRating,
+      reviewIds: allReviews.map(r => r._id.toString())
+    });
 
     return {
       success: true,
       data: {
-        reviews,
+        reviews: allReviews,
         averageRating,
-        totalReviews: reviews.length
+        totalReviews: allReviews.length
       }
     };
   } catch (error) {
-    console.error(error);
+    console.error('Error in getReviews:', error);
     return Boom.badImplementation('Server Error');
   }
 };
