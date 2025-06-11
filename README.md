@@ -28,7 +28,6 @@ npm install
 
 ### 2. Buat file `.env` di root folder dan isi dengan variabel berikut:
 ```env
-PORT=5000
 MONGO_URI=your_mongo_uri
 JWT_SECRET=your_secret
 MIDTRANS_CLIENT_KEY=your_client_key
