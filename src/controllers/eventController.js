@@ -1,7 +1,5 @@
 const Event = require('../models/Event');
-const fs = require('fs');
-const path = require('path');
-const Boom = require('@hapi/boom');
+const { cloudinary } = require('../config/cloudinary');
 
 // Get all events
 exports.getAllEvents = async (request, h) => {
@@ -62,34 +60,28 @@ exports.createEvent = async (request, h) => {
     if (payload.images) {
       const files = Array.isArray(payload.images) ? payload.images : [payload.images];
       
-      // Ensure uploads directory exists
-      const uploadDir = path.join(__dirname, '../../uploads');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
       for (const file of files) {
         if (file.hapi) {
           try {
-            // Generate unique filename
-            const timestamp = Date.now();
-            const originalName = file.hapi.filename;
-            const extension = path.extname(originalName);
-            const safeName = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-            const filepath = path.join(uploadDir, safeName);
+            // Upload to Cloudinary
+            const result = await new Promise((resolve, reject) => {
+              const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                  folder: 'santaratrip/events',
+                },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve(result);
+                }
+              );
 
-            // Save file
-            const fileStream = fs.createWriteStream(filepath);
-            await new Promise((resolve, reject) => {
-              file.pipe(fileStream)
-                .on('finish', resolve)
-                .on('error', reject);
+              file.pipe(uploadStream);
             });
 
-            // Add file path to images array
-            imagePaths.push(`/uploads/${safeName}`);
+            // Add Cloudinary URL to images array
+            imagePaths.push(result.secure_url);
           } catch (error) {
-            console.error('Error saving file:', error);
+            console.error('Error uploading to Cloudinary:', error);
             throw error;
           }
         }
@@ -99,18 +91,9 @@ exports.createEvent = async (request, h) => {
     // Create event data object
     const eventData = {
       name: payload.name,
-      detail: payload.detail,
-      price: Number(payload.price),
-      startDate: new Date(payload.startDate),
-      endDate: new Date(payload.endDate),
-      capacity: Number(payload.capacity),
-      location: {
-        address: payload['location.address'],
-        city: payload['location.city'],
-        province: payload['location.province']
-      },
-      status: payload.status || 'active',
-      images: imagePaths
+      description: payload.description,
+      images: imagePaths,
+      status: payload.status || 'active'
     };
 
     console.log('Creating event with data:', eventData);
@@ -151,34 +134,28 @@ exports.updateEvent = async (request, h) => {
     if (payload.images) {
       const files = Array.isArray(payload.images) ? payload.images : [payload.images];
       
-      // Ensure uploads directory exists
-      const uploadDir = path.join(__dirname, '../../uploads');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
       for (const file of files) {
         if (file.hapi) {
           try {
-            // Generate unique filename
-            const timestamp = Date.now();
-            const originalName = file.hapi.filename;
-            const extension = path.extname(originalName);
-            const safeName = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-            const filepath = path.join(uploadDir, safeName);
+            // Upload to Cloudinary
+            const result = await new Promise((resolve, reject) => {
+              const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                  folder: 'santaratrip/events',
+                },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve(result);
+                }
+              );
 
-            // Save file
-            const fileStream = fs.createWriteStream(filepath);
-            await new Promise((resolve, reject) => {
-              file.pipe(fileStream)
-                .on('finish', resolve)
-                .on('error', reject);
+              file.pipe(uploadStream);
             });
 
-            // Add file path to images array
-            imagePaths.push(`/uploads/${safeName}`);
+            // Add Cloudinary URL to images array
+            imagePaths.push(result.secure_url);
           } catch (error) {
-            console.error('Error saving file:', error);
+            console.error('Error uploading to Cloudinary:', error);
             throw error;
           }
         }
@@ -189,53 +166,30 @@ exports.updateEvent = async (request, h) => {
     let remainingImages = [];
     if (payload.remainingImages) {
       try {
-        remainingImages = JSON.parse(payload.remainingImages)
-          .map(url => url.replace(`${process.env.API_BASE_URL || 'http://localhost:3000'}`, ''));
+        remainingImages = JSON.parse(payload.remainingImages);
       } catch (error) {
         console.error('Error parsing remainingImages:', error);
       }
     }
 
+    // Combine new and remaining images
+    const allImages = [...remainingImages, ...imagePaths];
+
     // Create event data object
     const eventData = {
       name: payload.name || event.name,
-      detail: payload.detail || event.detail,
-      price: payload.price ? Number(payload.price) : event.price,
-      startDate: payload.startDate ? new Date(payload.startDate) : event.startDate,
-      endDate: payload.endDate ? new Date(payload.endDate) : event.endDate,
-      capacity: payload.capacity ? Number(payload.capacity) : event.capacity,
-      status: payload.status || event.status,
-      location: {
-        address: payload['location.address'] || event.location.address,
-        city: payload['location.city'] || event.location.city,
-        province: payload['location.province'] || event.location.province
-      },
-      images: [...remainingImages, ...imagePaths]
+      description: payload.description || event.description,
+      images: allImages.length > 0 ? allImages : event.images,
+      status: payload.status || event.status
     };
-
-    // Delete removed images from filesystem
-    const removedImages = event.images.filter(img => !remainingImages.includes(img));
-    for (const imagePath of removedImages) {
-      const fullPath = path.join(__dirname, '../..', imagePath);
-      if (fs.existsSync(fullPath)) {
-        try {
-          fs.unlinkSync(fullPath);
-          console.log(`Deleted file: ${fullPath}`);
-        } catch (error) {
-          console.error(`Error deleting file ${fullPath}:`, error);
-        }
-      }
-    }
-
-    console.log('Updating event with data:', eventData);
 
     // Update the event
     const updatedEvent = await Event.findByIdAndUpdate(
       request.params.id,
       eventData,
-      { new: true, runValidators: true }
+      { new: true }
     );
-    
+
     return h.response({
       success: true,
       data: updatedEvent
@@ -253,7 +207,6 @@ exports.updateEvent = async (request, h) => {
 exports.deleteEvent = async (request, h) => {
   try {
     const event = await Event.findById(request.params.id);
-    
     if (!event) {
       return h.response({
         success: false,
@@ -261,17 +214,20 @@ exports.deleteEvent = async (request, h) => {
       }).code(404);
     }
 
-    // Delete associated images
+    // Delete images from Cloudinary if they exist
     if (event.images && event.images.length > 0) {
-      event.images.forEach(imagePath => {
-        const fullPath = path.join(__dirname, '../..', imagePath);
-        if (fs.existsSync(fullPath)) {
-          fs.unlinkSync(fullPath);
+      for (const imageUrl of event.images) {
+        try {
+          // Extract public_id from Cloudinary URL
+          const publicId = imageUrl.split('/').slice(-1)[0].split('.')[0];
+          await cloudinary.uploader.destroy(`santaratrip/events/${publicId}`);
+        } catch (error) {
+          console.error('Error deleting image from Cloudinary:', error);
         }
-      });
+      }
     }
 
-    await event.deleteOne();
+    await Event.findByIdAndDelete(request.params.id);
 
     return h.response({
       success: true,
@@ -282,6 +238,6 @@ exports.deleteEvent = async (request, h) => {
     return h.response({
       success: false,
       message: error.message
-    }).code(500);
+    }).code(400);
   }
 }; 
