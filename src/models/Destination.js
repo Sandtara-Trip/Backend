@@ -11,6 +11,10 @@ const destinationSchema = new mongoose.Schema({
     required: [true, 'Kategori harus diisi'],
     enum: ['alam', 'budaya', 'religi', 'kuliner', 'hiburan']
   },
+  cuaca: {
+    type: String,
+    enum: ['panas', 'dingin']
+  },
   harga: {
     type: Number,
     required: [true, 'Harga harus diisi']

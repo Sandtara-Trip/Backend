@@ -6,10 +6,10 @@ require('dotenv').config();
 const init = async () => {
     const server = Hapi.server({
         port: process.env.PORT || 3000,
-        host: process.env.HOST || 'localhost',
+        host: process.env.HOST || '0.0.0.0',
         routes: {
             cors: {
-                origin: ['http://localhost:5173', 'http://localhost:3000'],
+                origin: ['http://localhost:5173', 'https://sandtara-trip.vercel.app/', 'http://localhost:3000'],
                 headers: [
                     'Accept',
                     'Authorization',

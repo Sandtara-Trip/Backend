@@ -13,10 +13,10 @@ const eventSchema = new mongoose.Schema({
   images: [{
     type: String
   }],
-  status: {
+  category: {
     type: String,
-    enum: ['active', 'inactive'],
-    default: 'active'
+    enum: ['kuliner khas denpasar', 'toko oleh-oleh'], // Optional categories
+    required: false // Not required
   }
 }, {
   timestamps: true
